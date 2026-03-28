@@ -10,7 +10,7 @@ class Backtester:
         self.cost = cost
         self.results = None
 
-    def run(self):
+    def run1(self):
         
         data = self.data.copy()
 
@@ -43,19 +43,71 @@ class Backtester:
         return data
 
 
-    # def performance(self):
+    def run(self):
+        print('oze')
+        prices = self.data.copy()
+        # Simple returns for all the assets
+        returns = prices.pct_change().fillna(0)
+        # print(type(returns))
+        # print(returns.head())
 
-    #     if self.results is None:
-    #         raise ValueError("Run the backtest first")
+        # Signals (DataFrame now)
+        signals = self.strategy.generate_signals(prices)
+
+        # print('Signals')
+        # print(signals.head())   
+
+        # Positions (to be taken based on our signals. Shift(1) because they'll be applied in the future)
+        positions = signals.shift(1).fillna(0)
+
+        # print('Positions')
+        # print(positions.head())
+
+        # Strategy returns (per asset)
+        strategy_returns = positions * returns
+        # print('Strategy returns')
+        # print(strategy_returns.head())
+
+        # Transaction costs
+        # print("positions diff")
+        # print(positions.diff().head())
+        trades = positions.diff().abs()
+        costs = trades * self.cost
+        # print('Trades')
+        # print(trades.head())
+        # print(costs.head())
+
+        strategy_returns = strategy_returns - costs
+
+        # Portfolio Aggregation. axis=1 as the index will be fixed and we take sum of returns across all assets
+        portfolio_returns = strategy_returns.sum(axis=1)
+
+        # print('Portfolio returns')
+        # print(portfolio_returns.head())
+
+        # Equity Curve
+        cum_strategy = (1 + portfolio_returns).cumprod()
+        # print('Cum Strategy')
+        # print(cum_strategy.head())
+
+        # Drawdown
+        cum_max = cum_strategy.cummax()
+        # print('cum_max')
+        # print(cum_max)
+        drawdown = cum_strategy/cum_max - 1
+        # print('drawdown')
+        # print(drawdown)
+
+        self.results = {
+            'returns' : returns,
+            'signals' : signals,
+            'positions' : positions,
+            'strategy_returns' : strategy_returns,
+            'portfolio_returns' : portfolio_returns,
+            'cum_strategy' : cum_strategy,
+            'drawdown' : drawdown
+        }
+
+        self.results = self.results
         
-    #     data = self.results
-        
-    #     total_return = data['cum_strategy'].iloc[-1] - 1
-
-    #     sharpe = (np.sqrt(252) * data['strategy'].mean()) / data['strategy'].std()
-
-    #     maxDrawdown = data['drawdown'].min()
-
-    #     return {"Total Return" : round(total_return, 4), "Sharpe" : round(sharpe, 4), "Max Drawdown" : round(maxDrawdown, 4)}
-
-
+        return self.results
