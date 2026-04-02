@@ -1,6 +1,6 @@
 from .metrics import(equity_curve, total_return,
     sharpe_ratio,
-    volatility,
+    volatility, 
     max_drawdown,
     win_rate,
     pnl_stats,
